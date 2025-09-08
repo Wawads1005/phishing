@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import path from "node:path";
 import { appRouter } from "@/routes";
 import {
   getNgrokTunnels,
@@ -12,6 +11,10 @@ import {
   DEFAULT_PORT,
   DEFAULT_STATIC_PATH,
 } from "@/constants";
+import path from "node:path";
+import fsPromises from "node:fs/promises";
+import inquirer from "inquirer";
+import { getSite } from "./controllers/api/sites";
 
 process.loadEnvFile();
 
@@ -19,36 +22,55 @@ const port = parseInt(process.env.PORT, 10) || DEFAULT_PORT;
 const domain = process.env.DOMAIN || DEFAULT_HOSTNAME;
 const app = express();
 
-app.use(express.json());
+(async () => {
+  const sites = await fsPromises.readdir(path.resolve("./views/sites"));
 
-app.use(express.urlencoded({ extended: false }));
+  const answer = await inquirer.prompt({
+    type: "list",
+    name: "selectedSite",
+    message: "Choose a fake site:",
+    choices: sites,
+  });
 
-app.use(express.static(path.resolve(DEFAULT_STATIC_PATH)));
+  const siteRouter = express.Router();
 
-app.use(cors({ credentials: true, origin: ["*"] }));
+  siteRouter.get("/", getSite(answer.selectedSite));
 
-app.use("/", appRouter);
+  appRouter.use(siteRouter);
 
-app.listen(port, domain, async (error) => {
-  if (error) {
-    console.error(error);
-    return;
-  }
+  app.use(express.json());
 
-  console.log(`Server running on port:${process.env.PORT}`);
+  app.use(express.urlencoded({ extended: false }));
 
-  const ngrokProcess = await createNgrokProcess({ port });
-  const ngrokTunnels = await getNgrokTunnels();
+  app.use(express.static(path.resolve(DEFAULT_STATIC_PATH)));
 
-  const foundTunnel = ngrokTunnels.tunnels.find((tunnel) => tunnel.public_url);
+  app.use(cors({ credentials: true, origin: ["*"] }));
 
-  if (!foundTunnel) {
-    console.log("Unexpected error occured, there's no tunnel was open");
-    return;
-  }
+  app.use("/", appRouter);
 
-  console.log(`Tunneled into ${foundTunnel.public_url}`);
-});
+  app.listen(port, domain, async (error) => {
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    console.log(`Server running on port:${process.env.PORT}`);
+
+    const ngrokProcess = await createNgrokProcess({ port });
+    const ngrokTunnels = await getNgrokTunnels();
+
+    const foundTunnel = ngrokTunnels.tunnels.find(
+      (tunnel) => tunnel.public_url
+    );
+
+    if (!foundTunnel) {
+      console.log("Unexpected error occured, there's no tunnel was open");
+      return;
+    }
+
+    console.log(`Tunneled into ${foundTunnel.public_url}`);
+  });
+})();
 
 process.on("exit", () => {
   deleteNgrokProcess();
