@@ -7,6 +7,8 @@ import webpackNodeExternals from "webpack-node-externals";
  * @typedef {import("webpack").Configuration} WebpackConfiguration
  */
 
+process.loadEnvFile();
+
 /**
  * @type {WebpackConfiguration}
  */
