@@ -36,7 +36,7 @@ async function createNgrokProcess(opts: CreateNgrokProcessOptions) {
     globalThis.ngrokProcess = ngrokProcess;
   }
 
-  await new Promise<childProcess.ChildProcessWithoutNullStreams>((resolve) => {
+  await new Promise((resolve) => {
     setTimeout(resolve, NGROK_TIMEOUT);
   });
 

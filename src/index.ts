@@ -14,7 +14,7 @@ import {
 import path from "node:path";
 import fsPromises from "node:fs/promises";
 import inquirer from "inquirer";
-import { getSite } from "./controllers/api/sites";
+import { getSite } from "@/controllers/api/sites";
 
 process.loadEnvFile();
 
@@ -56,19 +56,23 @@ const app = express();
 
     console.log(`Server running on port:${process.env.PORT}`);
 
-    const ngrokProcess = await createNgrokProcess({ port });
-    const ngrokTunnels = await getNgrokTunnels();
+    try {
+      const ngrokProcess = await createNgrokProcess({ port });
+      const ngrokTunnels = await getNgrokTunnels();
 
-    const foundTunnel = ngrokTunnels.tunnels.find(
-      (tunnel) => tunnel.public_url
-    );
+      const foundTunnel = ngrokTunnels.tunnels.find(
+        (tunnel) => tunnel.public_url
+      );
 
-    if (!foundTunnel) {
-      console.log("Unexpected error occured, there's no tunnel was open");
-      return;
+      if (!foundTunnel) {
+        console.log("Unexpected error occured, there's no tunnel was open");
+        return;
+      }
+
+      console.log(`Tunneled into ${foundTunnel.public_url}`);
+    } catch (error) {
+      console.error(error);
     }
-
-    console.log(`Tunneled into ${foundTunnel.public_url}`);
   });
 })();
 
